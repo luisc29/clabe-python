@@ -1,6 +1,6 @@
+from dataclasses import dataclass
+
 import pytest
-from pydantic import BaseModel
-from pydantic.errors import NotDigitError
 
 from clabe import BANK_NAMES, BANKS, compute_control_digit
 from clabe.errors import (
@@ -12,9 +12,12 @@ from clabe.types import Clabe, validate_digits
 VALID_CLABE = '646180157042875763'
 
 
-class Cuenta(BaseModel):
+@dataclass
+class Cuenta(object):
     clabe: Clabe
 
+    def __init__(self, clabe):
+        self.clabe = Clabe(clabe)
 
 def test_valid_clabe():
     cuenta = Cuenta(clabe=VALID_CLABE)
@@ -29,7 +32,7 @@ def test_clabe_digits():
 
 
 def test_clabe_not_digit():
-    with pytest.raises(NotDigitError):
+    with pytest.raises(TypeError):
         validate_digits('h' * 18)
 
 

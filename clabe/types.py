@@ -1,22 +1,14 @@
-from typing import TYPE_CHECKING, ClassVar
-
-from pydantic.errors import NotDigitError
-from pydantic.validators import (
-    constr_length_validator,
-    constr_strip_whitespace,
-    str_validator,
-)
+from decimal import Decimal
+from enum import Enum
+from typing import ClassVar
 
 from .errors import BankCodeValidationError, ClabeControlDigitValidationError
 from .validations import BANK_NAMES, BANKS, compute_control_digit
 
-if TYPE_CHECKING:
-    from pydantic.typing import CallableGenerator
-
 
 def validate_digits(v: str) -> str:
     if not v.isdigit():
-        raise NotDigitError
+        raise TypeError('No digit')
     return v
 
 
@@ -35,11 +27,11 @@ class Clabe(str):
         self.bank_name = BANK_NAMES[self.bank_code_banxico]
 
     @classmethod
-    def __get_validators__(cls) -> 'CallableGenerator':
-        yield str_validator
-        yield constr_strip_whitespace
-        yield constr_length_validator
-        yield validate_digits
+    def __get_validators__(cls):
+        yield cls.str_validator
+        yield cls.constr_strip_whitespace
+        yield cls.constr_length_validator
+        yield cls.validate_digits
         yield cls.validate_bank_code_abm
         yield cls.validate_control_digit
         yield cls
@@ -59,3 +51,40 @@ class Clabe(str):
     @property
     def bank_code(self):
         return self.bank_code_banxico
+
+    @classmethod
+    def validate_digits(cls, clabe: str) -> str:
+        if not clabe.isdigit():
+            raise TypeError('No digit')
+        return clabe
+
+    @classmethod
+    def constr_length_validator(cls, clabe: str) -> str:
+        clabe_len = len(clabe)
+
+        if clabe_len > cls.max_length:
+            raise AttributeError('Max length exceeded')
+
+        if clabe_len < cls.min_length:
+            raise AttributeError('Min length exceeded')
+
+        return clabe
+
+    @classmethod
+    def str_validator(cls, clabe: str) -> str:
+        if isinstance(clabe, str):
+            if isinstance(clabe, Enum):
+                return clabe.value
+            else:
+                return clabe
+        elif isinstance(clabe, (float, int, Decimal)):
+            # is there anything else we want to add here? If you think so, create an issue.
+            return str(clabe)
+        elif isinstance(clabe, (bytes, bytearray)):
+            return clabe.decode()
+        else:
+            raise TypeError('Not a string')
+
+    @classmethod
+    def constr_strip_whitespace(cls, clabe: str) -> str:
+        return clabe.strip()
